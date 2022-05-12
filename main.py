@@ -1,10 +1,8 @@
 from unet import multi_unet_model
-from keras.utils.np_utils import normalize
 import os
 import glob
 import cv2
 import numpy as np
-from matplotlib import pyplot as plt
 from keras.utils.np_utils import to_categorical
 from keras.models import load_model
 
