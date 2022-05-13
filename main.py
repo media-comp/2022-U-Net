@@ -24,7 +24,6 @@ def collect_images(path):
             filenames.append(Path(img_path).stem)
     return images_set, filenames
 
-
 # Extended the comment section to include reading of training images, since those are not available in the repo
 
 # uncomment this section if you would like to train the network
