@@ -47,37 +47,37 @@ IMG_HEIGHT = X_train.shape[1]
 IMG_WIDTH = X_train.shape[2]
 IMG_CHANNELS = X_train.shape[3]
 
-# # uncomment this section if you would like to train the network
-# #
-# # class Model:
-# #
-# #     def __init__(self, img_height, img_width, img_channels, n_class):
-# #         self.img_height = img_height
-# #         self.img_width = img_width
-# #         self.img_channels = img_channels
-# #         self.n_class = n_class
-# #         self.model = multi_unet_model(n_classes=self.n_class, IMG_HEIGHT=self.img_height, IMG_WIDTH=self.img_width,
-# #                                       IMG_CHANNELS=self.img_channels)
-# #
-# #     def get_model(self):
-# #         return self.model
-# #
-# #     def compile_model(self):
-# #         return model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
+# uncomment this section if you would like to train the network
+#
+# class Model:
+#
+#     def __init__(self, img_height, img_width, img_channels, n_class):
+#         self.img_height = img_height
+#         self.img_width = img_width
+#         self.img_channels = img_channels
+#         self.n_class = n_class
+#         self.model = multi_unet_model(n_classes=self.n_class, IMG_HEIGHT=self.img_height, IMG_WIDTH=self.img_width,
+#                                       IMG_CHANNELS=self.img_channels)
+#
+#     def get_model(self):
+#         return self.model
+#
+#     def compile_model(self):
+#         return model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
 
-# # model = Model(IMG_HEIGHT, IMG_WIDTH, IMG_CHANNELS, n_classes).get_model()
-# #
-# # model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
-# # model.summary()
-# #
-# # history = model.fit(X_train, y_train_cat,
-# #                     batch_size=4,
-# #                     verbose=1,
-# #                     epochs=5,
-# #                     # class_weight=class_weights,
-# #                     shuffle=False)
-# #
-# # model.save('test8.hdf5')
+# model = Model(IMG_HEIGHT, IMG_WIDTH, IMG_CHANNELS, n_classes).get_model()
+#
+# model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
+# model.summary()
+#
+# history = model.fit(X_train, y_train_cat,
+#                     batch_size=4,
+#                     verbose=1,
+#                     epochs=5,
+#                     # class_weight=class_weights,
+#                     shuffle=False)
+#
+# model.save('test8.hdf5')
 
 
 ############## predict
