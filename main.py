@@ -1,3 +1,5 @@
+import sys
+
 from unet import multi_unet_model
 import os
 import glob
@@ -10,18 +12,23 @@ from pathlib import Path
 n_classes = 4  # Number of classes for segmentation
 
 
-def collect_images(path):
+def collect_images(path, max_images=None):
     images_set = []
 
     # keep track of the filenames, since glob returns filenames in arbitrary order,
     # saving them later based on batch index messes up the order
     filenames = []
+    i = 0
     for directory_path in glob.glob(path):
         for img_path in glob.glob(os.path.join(directory_path, "*.png")):
+            # added a max images variable, because loading all images fails on the workflow runner
+            if max_images is not None and i == max_images:
+                break
             img = cv2.imread(img_path, 1)
             # img = cv2.resize(img, (SIZE_Y, SIZE_X))
             images_set.append(img)
             filenames.append(Path(img_path).stem)
+            i += 1
     return images_set, filenames
 
 # Extended the comment section to include reading of training images, since those are not available in the repo
@@ -92,9 +99,9 @@ def collect_images(path):
 
 class Predict:
 
-    def __init__(self, model_parameter_file_name, test_image_path):
+    def __init__(self, model_parameter_file_name, test_image_path, max_test_images):
         self.model_parameter_file_name = model_parameter_file_name
-        self.test_images, self.filenames = collect_images("%s" % test_image_path)
+        self.test_images, self.filenames = collect_images("%s" % test_image_path, max_test_images)
 
     def write_predicted_images(self):
         model_testing = load_model('%s' % self.model_parameter_file_name, compile=False)
@@ -118,7 +125,19 @@ class Predict:
             cv2.imwrite('predict/%s.png' % self.filenames[a], gray_img)
 
 
-Predict('test7.hdf5', "testing_images/").write_predicted_images()
+if __name__ == '__main__':
+    # added a cmd line argument for max number of images to test on
+    # invoke the script as
+    #       python main.py 2
+    # this will run prediction on only 2 images.
+    # running without any argument will run on all images in the directory
+
+    if len(sys.argv) == 2:
+        num_test_images = int(sys.argv[1])
+    else:
+        num_test_images = None
+
+    Predict('test7.hdf5', "testing_images/", num_test_images).write_predicted_images()
 
 ########### load and continue to run the model
 
