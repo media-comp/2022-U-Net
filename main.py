@@ -107,7 +107,37 @@ class Predict:
             cv2.imwrite('predict/%d.png' % a, gray_img)
 
 
-Predict('test7.hdf5', "testing_images/").write_predicted_images()
+# Predict('test7.hdf5', "testing_images/").write_predicted_images()
+
+class Predict_seperate:
+
+    def __init__(self, model_parameter_file_name, test_image_path):
+        self.model_parameter_file_name = model_parameter_file_name
+        self.test_images = collect_images("%s" % test_image_path)
+
+    def write_predicted_images(self):
+        model_testing = load_model('%s' % self.model_parameter_file_name, compile=False)
+        test_images = self.test_images
+        test_images = np.expand_dims(test_images, axis=4)
+        test_images = test_images / 255
+
+        os.makedirs('predict', exist_ok=True)
+        
+        for i, test_image in enumerate(test_images):
+            test_image = np.expand_dims(test_image, axis=0)
+            y_pred = model_testing.predict(test_image)
+
+            max = np.argmax(y_pred, axis=3)
+            max = max * 40
+            gray_img = np.zeros((368, 1232, 3))
+            gray_img = gray_img.astype('int8')
+            gray_img[:, :, 0] = max[0]
+            gray_img[:, :, 1] = max[0] * 2
+            gray_img[:, :, 2] = max[0]
+
+            cv2.imwrite('predict/%d.png' % i, gray_img)
+
+Predict_seperate('test7.hdf5', "testing_images/").write_predicted_images()
 
 ########### load and continue to run the model
 
