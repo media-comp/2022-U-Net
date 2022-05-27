@@ -1,3 +1,5 @@
+import sys
+
 from unet import multi_unet_model
 import os
 import glob
@@ -5,49 +7,62 @@ import cv2
 import numpy as np
 from keras.utils.np_utils import to_categorical
 from keras.models import load_model
-#
+from pathlib import Path
+
 n_classes = 4  # Number of classes for segmentation
 
 
-def collect_images(path):
+def collect_images(path, max_images=None):
     images_set = []
+
+    # keep track of the filenames, since glob returns filenames in arbitrary order,
+    # saving them later based on batch index messes up the order
+    filenames = []
+    i = 0
     for directory_path in glob.glob(path):
         for img_path in glob.glob(os.path.join(directory_path, "*.png")):
+            # added a max images variable, because loading all images fails on the workflow runner
+            if max_images is not None and i == max_images:
+                break
             img = cv2.imread(img_path, 1)
             # img = cv2.resize(img, (SIZE_Y, SIZE_X))
             images_set.append(img)
-    return images_set
+            filenames.append(Path(img_path).stem)
+            i += 1
+    return images_set, filenames
 
-
-train_images = collect_images("train_image/")
-train_images = np.array(train_images)
-
-train_masks = collect_images("train_semantic/")
-train_masks = np.array(train_masks)
-train_masks = train_masks[:, :, :, 0]
-
-#########data normalization
-train_images = np.expand_dims(train_images, axis=4)
-train_images = train_images / 255
-
-train_masks_input = np.expand_dims(train_masks, axis=3)
-
-y_train = train_masks_input
-X_train = train_images
-
-############make train mask data which have 4 categories to display data in categorical way
-
-train_masks_cat = to_categorical(y_train, num_classes=n_classes)
-y_train_cat = train_masks_cat.reshape((y_train.shape[0], y_train.shape[1], y_train.shape[2], n_classes))
-
-###############################################################
-
-
-IMG_HEIGHT = X_train.shape[1]
-IMG_WIDTH = X_train.shape[2]
-IMG_CHANNELS = X_train.shape[3]
+# Extended the comment section to include reading of training images, since those are not available in the repo
 
 # uncomment this section if you would like to train the network
+
+# train_images, _ = collect_images("train_image/")
+# train_images = np.array(train_images)
+#
+# train_masks, _ = collect_images("train_semantic/")
+# train_masks = np.array(train_masks)
+# train_masks = train_masks[:, :, :, 0]
+#
+# #########data normalization
+# train_images = np.expand_dims(train_images, axis=4)
+# train_images = train_images / 255
+#
+# train_masks_input = np.expand_dims(train_masks, axis=3)
+#
+# y_train = train_masks_input
+# X_train = train_images
+#
+# ############make train mask data which have 4 categories to display data in categorical way
+#
+# train_masks_cat = to_categorical(y_train, num_classes=n_classes)
+# y_train_cat = train_masks_cat.reshape((y_train.shape[0], y_train.shape[1], y_train.shape[2], n_classes))
+#
+# ###############################################################
+#
+#
+# IMG_HEIGHT = X_train.shape[1]
+# IMG_WIDTH = X_train.shape[2]
+# IMG_CHANNELS = X_train.shape[3]
+
 #
 # class Model:
 #
@@ -84,9 +99,9 @@ IMG_CHANNELS = X_train.shape[3]
 
 class Predict:
 
-    def __init__(self, model_parameter_file_name, test_image_path):
+    def __init__(self, model_parameter_file_name, test_image_path, max_test_images):
         self.model_parameter_file_name = model_parameter_file_name
-        self.test_images = collect_images("%s" % test_image_path)
+        self.test_images, self.filenames = collect_images("%s" % test_image_path, max_test_images)
 
     def write_predicted_images(self):
         model_testing = load_model('%s' % self.model_parameter_file_name, compile=False)
@@ -97,6 +112,8 @@ class Predict:
         max = np.argmax(y_pred, axis=3)
         max = max * 40
 
+        os.makedirs('predict', exist_ok=True)       # added this line because imwrite does not create directory
+
         for a in range(0, max.shape[0]):
             gray_img = np.zeros((368, 1232, 3))
             gray_img = gray_img.astype('int8')
@@ -104,10 +121,23 @@ class Predict:
             gray_img[:, :, 1] = max[a] * 2
             gray_img[:, :, 2] = max[a]
 
-            cv2.imwrite('predict/%d.png' % a, gray_img)
+            # instead of using batch index directly, use it to get the filename from the list returned by collect_images
+            cv2.imwrite('predict/%s.png' % self.filenames[a], gray_img)
 
 
-Predict('test7.hdf5', "testing_images/").write_predicted_images()
+if __name__ == '__main__':
+    # added a cmd line argument for max number of images to test on
+    # invoke the script as
+    #       python main.py 2
+    # this will run prediction on only 2 images.
+    # running without any argument will run on all images in the directory
+
+    if len(sys.argv) == 2:
+        num_test_images = int(sys.argv[1])
+    else:
+        num_test_images = None
+
+    Predict('test7.hdf5', "testing_images/", num_test_images).write_predicted_images()
 
 ########### load and continue to run the model
 
