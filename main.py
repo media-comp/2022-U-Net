@@ -5,24 +5,28 @@ import cv2
 import numpy as np
 from keras.utils.np_utils import to_categorical
 from keras.models import load_model
-#
-n_classes = 4  # Number of classes for segmentation
 
+dataset_name = "mbrsc" # could be mbrsc or kitti
+n_classes = 6  # Number of classes for segmentation. KITTI is 4. MBRSC is 6.
 
-def collect_images(path):
+def collect_images(path, w = 256, h = 256):
     images_set = []
-    for directory_path in glob.glob(path):
-        for img_path in glob.glob(os.path.join(directory_path, "*.png")):
-            img = cv2.imread(img_path, 1)
-            # img = cv2.resize(img, (SIZE_Y, SIZE_X))
-            images_set.append(img)
+    for img_dir in sorted(os.listdir(path)):
+        img = cv2.imread(os.path.join(path,img_dir), 1)
+        if "mbrsc" in path:
+            img = cv2.resize(img, (w,h), interpolation=cv2.INTER_NEAREST)
+            if "semantic" in path:
+                color_dict = {246:0,228:1,41:2,58:3,152:4,155:5,0:0}
+                for i in range(w):
+                    for j in range(h):
+                        img[i,j,0] = color_dict[img[i,j,0]]
+        images_set.append(img)
     return images_set
 
-
-train_images = collect_images("train_image/")
+train_images = collect_images(os.path.join("datasets",dataset_name,"train_image/"))
 train_images = np.array(train_images)
 
-train_masks = collect_images("train_semantic/")
+train_masks = collect_images(os.path.join("datasets",dataset_name,"train_semantic/"))
 train_masks = np.array(train_masks)
 train_masks = train_masks[:, :, :, 0]
 
@@ -48,45 +52,45 @@ IMG_WIDTH = X_train.shape[2]
 IMG_CHANNELS = X_train.shape[3]
 
 # uncomment this section if you would like to train the network
-#
-# class Model:
-#
-#     def __init__(self, img_height, img_width, img_channels, n_class):
-#         self.img_height = img_height
-#         self.img_width = img_width
-#         self.img_channels = img_channels
-#         self.n_class = n_class
-#         self.model = multi_unet_model(n_classes=self.n_class, IMG_HEIGHT=self.img_height, IMG_WIDTH=self.img_width,
-#                                       IMG_CHANNELS=self.img_channels)
-#
-#     def get_model(self):
-#         return self.model
-#
-#     def compile_model(self):
-#         return model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
+class Model:
 
-# model = Model(IMG_HEIGHT, IMG_WIDTH, IMG_CHANNELS, n_classes).get_model()
-#
-# model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
-# model.summary()
-#
-# history = model.fit(X_train, y_train_cat,
-#                     batch_size=4,
-#                     verbose=1,
-#                     epochs=5,
-#                     # class_weight=class_weights,
-#                     shuffle=False)
-#
-# model.save('test8.hdf5')
+    def __init__(self, img_height, img_width, img_channels, n_class):
+        self.img_height = img_height
+        self.img_width = img_width
+        self.img_channels = img_channels
+        self.n_class = n_class
+        self.model = multi_unet_model(n_classes=self.n_class, IMG_HEIGHT=self.img_height, IMG_WIDTH=self.img_width,
+                                      IMG_CHANNELS=self.img_channels)
+
+    def get_model(self):
+        return self.model
+
+    def compile_model(self):
+        return model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
+
+model = Model(IMG_HEIGHT, IMG_WIDTH, IMG_CHANNELS, n_classes).get_model()
+
+model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
+model.summary()
+
+history = model.fit(X_train, y_train_cat,
+                    batch_size=4,
+                    verbose=1,
+                    epochs=50,
+                    # class_weight=class_weights,
+                    shuffle=False)
+
+model.save('test8.hdf5')
 
 
 ############## predict
 
 class Predict:
 
-    def __init__(self, model_parameter_file_name, test_image_path):
+    def __init__(self, model_parameter_file_name, test_image_path, output_shape = (368, 1232, 3)):
         self.model_parameter_file_name = model_parameter_file_name
         self.test_images = collect_images("%s" % test_image_path)
+        self.output_shape = output_shape
 
     def write_predicted_images(self):
         model_testing = load_model('%s' % self.model_parameter_file_name, compile=False)
@@ -98,7 +102,7 @@ class Predict:
         max = max * 40
 
         for a in range(0, max.shape[0]):
-            gray_img = np.zeros((368, 1232, 3))
+            gray_img = np.zeros(self.output_shape)
             gray_img = gray_img.astype('int8')
             gray_img[:, :, 0] = max[a]
             gray_img[:, :, 1] = max[a] * 2
@@ -107,20 +111,20 @@ class Predict:
             cv2.imwrite('predict/%d.png' % a, gray_img)
 
 
-Predict('test7.hdf5', "testing_images/").write_predicted_images()
+Predict('test_mbrsc.hdf5', os.path.join("datasets",dataset_name,"testing_images/"), output_shape=(256,256,3)).write_predicted_images()
 
 ########### load and continue to run the model
 
 # uncomment if you would like to continue to run
 
 # model_cont_run = load_model('test6.hdf5', compile=False)
-#
+
 # model_cont_run.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
-#
+
 # history = model_cont_run.fit(X_train, y_train_cat,
 #                              batch_size=4,
 #                              verbose=1,
 #                              epochs=30,
 #                              shuffle=False)
-#
+
 # model_cont_run.save('test8.hdf5')
