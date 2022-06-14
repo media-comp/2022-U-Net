@@ -1,22 +1,16 @@
 from unet_pytorch import UNet
 import os
 import glob
-from PIL import Image
 import torch
 import torch.nn as nn
 import torchvision.transforms as T
-
-
-# from main.py
 import cv2
 import numpy as np
 from keras.utils.np_utils import to_categorical
-from keras.models import load_model
 
 import re
 def atoi(text):
     return int(text) if text.isdigit() else text
-
 def natural_keys(text):
     return [ atoi(c) for c in re.split(r'(\d+)', text) ]
 
@@ -33,7 +27,6 @@ def collect_images(path):
             # img = cv2.resize(img, (SIZE_Y, SIZE_X))
             images_set.append(img)
     return images_set
-
 
 train_images = collect_images("train_image/")
 train_images = np.array(train_images)
@@ -66,11 +59,10 @@ X_train = torch.from_numpy(X_train.astype(np.float32)).clone().squeeze().permute
 y_train_cat = torch.from_numpy(y_train_cat.astype(np.float32)).clone().permute(0,3,1,2)
 
 
-
 model = UNet(n_classes, IMG_HEIGHT, IMG_WIDTH, IMG_CHANNELS).to(device)
 optimizer = torch.optim.Adam(params=model.parameters(),lr=1e-4)
 criterion = nn.CrossEntropyLoss()
-#torch.set_printoptions(edgeitems=500)
+
 to_pil_image = T.ToPILImage()
 print("=========start training========")
 for i in range(X_train.shape[0]):
@@ -79,10 +71,6 @@ for i in range(X_train.shape[0]):
     x = X_train[i,:,:,:].to(device)
     y = y_train_cat[i,:,:,:].to(device)
     predict = model(x)
-    #ans = to_pil_image(predict)
-    #ans.save('pred'+str(i)+'.png')
-    #print(predict)
-    #print(y)
 
     loss = criterion(predict, y)
     
@@ -114,11 +102,7 @@ class Predict:
         with torch.no_grad():
             for i in range(test_images.shape[0]):
                 y_pred = model(test_images[i, :, :, :])
-                
-                #ans = to_pil_image(y_pred)
-                #ans.save('pred'+str(i)+'.png')
-                
-                y_pred = y_pred#.permute(1, 2, 0)
+
                 y_pred = y_pred.detach().numpy().copy().transpose((1, 2, 0))
                 max = np.argmax(y_pred, axis=2)
                 max = max * 40
@@ -131,21 +115,3 @@ class Predict:
 
 
 Predict('pytorch_weight.pth', "./testing_images/").write_predicted_images()
-
-"""
-########### load and continue to run the model
-
-# uncomment if you would like to continue to run
-
-# model_cont_run = load_model('test6.hdf5', compile=False)
-#
-# model_cont_run.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
-#
-# history = model_cont_run.fit(X_train, y_train_cat,
-#                              batch_size=4,
-#                              verbose=1,
-#                              epochs=30,
-#                              shuffle=False)
-#
-# model_cont_run.save('test8.hdf5')
-"""
