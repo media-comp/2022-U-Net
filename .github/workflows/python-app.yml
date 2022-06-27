@@ -14,6 +14,6 @@ jobs:
         run: pip install -r requirements.txt
 
 
-      - name: Run main_pytorch.py 
+      - name: Run main.py 
         run: 
-          python main_pytorch.py
+          python main.py
