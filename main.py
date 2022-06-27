@@ -123,4 +123,4 @@ Predict('test7.hdf5', "testing_images/").write_predicted_images()
 #                              epochs=30,
 #                              shuffle=False)
 #
-# model_cont_run.save('test8.hdf5')
+# #model_cont_run.save('test8.hdf5')
